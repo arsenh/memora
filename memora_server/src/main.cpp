@@ -40,77 +40,70 @@ void do_something(int clientfd)
 	write(clientfd, wbuf, strlen(wbuf));
 }
 
-int read_full(int fd, char *buf, size_t n)
-{
+int32_t read_full(int fd, char *buf, size_t n) {
 	while (n > 0)
 	{
 		ssize_t rv = read(fd, buf, n);
 		if (rv <= 0) {
-			return -1; // error or unexpected EOF
+			return -1; // error, or unexpected EOF
 		}
-		assert(static_cast<size_t>(rv) <= n);
-		n -= static_cast<size_t>(rv);
+		assert((size_t)rv <= n);
+		n -= (size_t)rv;
 		buf += rv;
 	}
 	return 0;
 }
 
-int write_all(int fd, char *buf, size_t n)
-{
+int32_t write_all(int fd, const char *buf, size_t n) {
 	while (n > 0)
 	{
 		ssize_t rv = write(fd, buf, n);
 		if (rv <= 0) {
-			return -1; // error or unexpected EOF
+			return -1; // error
 		}
-		assert(static_cast<size_t>(rv) <= n);
-		n -= static_cast<size_t>(rv);
+		assert((size_t)rv <= n);
+		n -= (size_t)rv;
 		buf += rv;
 	}
 	return 0;
 }
 
-
 const size_t k_max_msg = 4096;
 
-int one_request(int clientfd)
+int32_t one_request(int connfd)
 {
-	// 4 for header
+	// 4 bytes header
 	char rbuf[4 + k_max_msg];
-
 	errno = 0;
-	int32_t err = read_full(clientfd, rbuf, 4);
-
-	if (err)
-	{
+	int32_t err = read_full(connfd, rbuf, 4);
+	if (err) {
 		printf(errno == 0 ? "EOF" : "read() error");
 		return err;
 	}
-	int len = 0;
-	memcpy(&len, rbuf, 4);
-	if (len > k_max_msg)
-	{
-		printf("message too long");
+	uint32_t len = 0;
+	memcpy(&len, rbuf, 4); // assume little endian
+	if (len > k_max_msg) {
+		printf("too long");
 		return -1;
 	}
-
-	err = read_full(clientfd, &rbuf[4], len);
+	// request body
+	err = read_full(connfd, &rbuf[4], len);
 	if (err) {
 		printf("read() error");
 		return err;
 	}
 	// do something
-	printf(	"client says: %.*s\n"
+	printf("client says: %.*s\n"
 	, len, &rbuf[4]);
 	// reply using the same protocol
-	const char reply[] = "world";
+	const char reply[] =
+	"world";
 	char wbuf[4 + sizeof(reply)];
 	len = (uint32_t)strlen(reply);
 	memcpy(wbuf, &len, 4);
 	memcpy(&wbuf[4], reply, len);
-	return write_all(clientfd, wbuf, 4 + len);
+	return write_all(connfd, wbuf, 4 + len);
 }
-
 
 
 [[noreturn]] auto main() -> int
@@ -162,7 +155,6 @@ int one_request(int clientfd)
 			continue;
 		}
 		print_client_host(clientfd);
-
 		while(true)
 		{
 			if (const int err = one_request(clientfd))

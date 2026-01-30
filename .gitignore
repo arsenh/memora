@@ -45,3 +45,8 @@ build
 
 # cmake generated files
 CMakeUserPresets.json
+
+#IDE dirs
+.idea
+bin
+memora_server/.idea
