@@ -1,18 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
-project(memora_server)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+project(memora_server LANGUAGES CXX)
 
-# Include directories
-include_directories(
-        ${CMAKE_SOURCE_DIR}/src
+add_executable(memora_server
+    src/main.cpp
+    src/server/server.cpp
 )
 
-# Source files
-add_executable(${PROJECT_NAME}
-        src/main.cpp
+target_include_directories(memora_server
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
-
+target_compile_features(memora_server
+    PUBLIC cxx_std_23
+)
