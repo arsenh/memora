@@ -1,5 +1,8 @@
 #include <memora/server/server.hpp>
 #include <print>
+#include <memory>
+
+#include "memora/server/session.hpp"
 
 namespace memora
 {
@@ -20,6 +23,7 @@ namespace memora
         {
             if (!ec) {
                 std::println("New connection from: {}", socket.remote_endpoint().address().to_string());
+                std::make_shared<Session>(std::move(socket))->start();
             }
             do_accept();
         });
