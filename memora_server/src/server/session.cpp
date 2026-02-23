@@ -27,7 +27,7 @@ namespace memora
                 else
                 {
                     std::println("Read error: {}", ec.message());
-                    // TODO: close client socket
+                    self->stop();
                 }
             });
     }
@@ -49,7 +49,7 @@ namespace memora
                 else
                 {
                     std::println("Write error: {}", ec.message());
-                    // TODO: close client socket
+                    self->stop();
                 }
             });
     }
@@ -58,7 +58,10 @@ namespace memora
     {
         std::println("Closing socket...");
         boost::system::error_code ec;
-        if (socket_.shutdown(tcp::socket::shutdown_both, ec)) std::println("Error shutting down socket: {}", ec.message());
+        socket_.shutdown(tcp::socket::shutdown_both, ec);
+        if (ec && ec != boost::asio::error::not_connected) {
+            std::println("Error shutting down socket: {}", ec.message());
+        }
         if (socket_.close(ec)) std::println("Error closing socket: {}", ec.message());
     }
 }

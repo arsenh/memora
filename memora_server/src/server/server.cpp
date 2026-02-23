@@ -28,7 +28,9 @@ namespace memora
         {
             if (!ec) {
                 std::println("New connection from: {}", socket.remote_endpoint().address().to_string());
-                std::make_shared<Session>(std::move(socket))->start();
+                auto session = std::make_shared<Session>(std::move(socket));
+                self->sessions_.insert(session);
+                session->start();
             }
             self->do_accept();
         });
