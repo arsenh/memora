@@ -2,87 +2,62 @@ package main
 
 import (
 	"bufio"
-	"encoding/binary"
-	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"os"
+
+	"github.com/arsenh/memora_cli/tcp"
 )
 
-const K_MAX_MSG_LEN = 4096
-const HEADER_LEN = 4
-
-func query(conn net.Conn, text string) error {
-	l := len(text)
-	if l > K_MAX_MSG_LEN {
-		return errors.New("payload too large")
-	}
-	textLen := uint32(l)
-	writeData := make([]byte, HEADER_LEN+textLen)
-
-	binary.LittleEndian.PutUint32(writeData[0:HEADER_LEN], textLen)
-	copy(writeData[HEADER_LEN:], text)
-
-	n, err := conn.Write(writeData)
-	if err != nil {
-		log.Println("error to write data to server")
-		return err
-	}
-	log.Printf("sended bytes: %d\n", n)
-
-	header := make([]byte, 4)
-	n, err = io.ReadFull(conn, header)
-	if err != nil {
-		log.Println("error readfull from server")
-		return err
-	}
-	log.Printf("recevied header bytes: %d\n", n)
-
-	len := binary.LittleEndian.Uint32(header)
-
-	if len > K_MAX_MSG_LEN {
-		log.Println("error payload is too large")
-		return errors.New("payload error")
-	}
-
-	payload := make([]byte, len)
-
-	io.ReadFull(conn, payload)
-
-	fmt.Println("Payload: ", string(payload))
-	return nil
-}
-
 func main() {
+	// parser := resp.NewRESPParser()
+
+	// commands := []string{
+	// 	"PING",
+	// 	"SET key value",
+	// 	"GET key",
+	// 	"DEL key",
+	// 	"EXISTS key",
+	// 	"MSET a 1 b 2 c 3",
+	// 	"LPUSH mylist b c d",
+	// }
+
+	// for _, command := range commands {
+	// 	payload := parser.Parse2(command)
+	// 	fmt.Printf("Client command: %s, Payload: %q\n", command, payload)
+	// }
+
 	fmt.Println("Memora CLI.")
 	serverAddress := "localhost:8080"
 
-	conn, err := net.Dial("tcp", serverAddress)
+	client, err := tcp.NewTcpClient(serverAddress) // TODO: need to get address from command line
 
 	if err != nil {
-		log.Fatalln("Could not connect to memora server. Please check if server is running.")
+		log.Fatal(err)
 	}
 
-	defer conn.Close()
-
+	defer client.Close()
 	fmt.Printf("Connected to Memora server at %s\n", serverAddress)
 
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print(">> ")
-		intput, _ := reader.ReadString('\n')
+		input, _ := reader.ReadString('\n')
 
-		if intput == "quit" {
+		if input == "quit" {
 			log.Println("Exist.")
 			os.Exit(0)
 		}
 
-		err := query(conn, intput)
-
+		err := client.Send(input)
 		if err != nil {
-			break
+			log.Fatal(err)
 		}
+
+		response, err := client.Read()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(response)
 	}
 }
